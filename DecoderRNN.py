@@ -30,7 +30,7 @@ class DecoderRNN:
 		output = self.embedding(input).view(1, 1, -1)
 		output, hidden = self.lstm(output, hidden)
 		output = self.out(output[0])
-		output = self.softmax(output)
+		# output = self.softmax(output)
 		return output, hidden
 
 	def initHidden(self):
