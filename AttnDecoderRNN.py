@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
+import Attention
 import torch.nn.init as torch_init
 
 
@@ -14,7 +15,7 @@ class AttnDecoderRNN:
 		# size of dictionary for embedding = output_size
 		# size of embedding vector = hidden_size
 		self.embedding = nn.Embedding(output_size, hidden_size)
-		self.attn = Attention()
+		self.attn = Attention(hidden_size)
 		# combine attention and inputs
 		self.attn_combine = nn.Linear(hidden_size * 2, hidden_size)
 		self.dropout = nn.Dropout(dropout_p)
