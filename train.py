@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[3]:
+# In[1]:
 
 
 import torch
@@ -83,11 +83,15 @@ def preprocessing(file_name):
         split_list = re.split(pattern, comment[i])
         temp_list = []
         for x in split_list:
-            temp_list.append(x)
+            temp_list.append(comment_dict[x])
         comment_in_num.append(temp_list)
 
-    max_len_code = max([len(code_in_num[i]) for i in range(len(code_in_num))])
-    max_len_comment = max([len(comment_in_num[i]) for i in range(len(comment_in_num))])
+    # max_len_code = max([(code_in_num[i]) for i in range(len(code_in_num))])
+    # max_len_comment = max([(comment_in_num[i]) for i in range(len(comment_in_num))])
+    max_len_code = max([max(sublist) for sublist in code_in_num])
+    max_len_comment = max([max(sublist) for sublist in comment_in_num])
+    print("Max length of code: " + str(max_len_code))
+    print("Max length of comment: " + str(max_len_comment))
 
     for i in range(len(code_in_num)):
         while len(code_in_num[i]) < max_len_code:
@@ -105,7 +109,7 @@ def build_model(word_size_encoder, word_size_decoder, emb_dim=10, hidden_size=10
     # run on the gpu or cpu
     model = model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.L1Loss()
     # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -128,17 +132,22 @@ def train_model(model, criterion, optimizer, dataloaders,
         ## reset evaluator in a new epoch
         evaluate.reset(epoch)
 
-        for i, (inputs, targets) in enumerate(dataloaders['train']):
+        for i in range(len(dataloaders['train'][0])):
 
             # Put the minibatch data in CUDA Tensors and run on the GPU if supported
+            #inputs, targets = inputs.to(device), targets.to(device)
+            
+            inputs, targets = dataloaders['train'][0][i], dataloaders['train'][1][i]
+            inputs = torch.LongTensor(inputs)
+            targets = torch.LongTensor(targets)
             inputs, targets = inputs.to(device), targets.to(device)
 
             model.zero_grad()
 
             # regular stuff
-            outputs = model(inputs, targets)
+            outputs, _ = model(inputs, targets)
             # squeeze the unnecessary batchsize dim
-            loss = criterion(outputs, targets.squeeze())
+            loss = criterion(outputs[0], targets.float())
             loss.backward()
             optimizer.step()
 
@@ -188,17 +197,20 @@ def validate_model(model, criterion, loader, device=None, verbose=False):
     # if istest: step = 1
 
     with torch.no_grad():
-        for j, (inputs, targets) in enumerate(loader):
+        for i in range(len(loader[0])):
             # Put the minibatch data in CUDA Tensors and run on the GPU if supported
+            inputs, targets = loader[0][i], loader[1][i]
+            inputs = torch.LongTensor(inputs)
+            targets = torch.LongTensor(targets)
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs = model(inputs)
-            loss = criterion(outputs, targets.squeeze())
+            outputs, _ = model(inputs, targets)
+            loss = criterion(outputs, targets.float())
             evaluate(loss, outputs)
 
             if verbose:
-                if j % step == 0:
-                    print('[%i] val-loss: %.4f' % (j, evaluate.avg_loss()))
+                if i % step == 0:
+                    print('[%i] val-loss: %.4f' % (i, evaluate.avg_loss()))
 
             # if istest:
             #     if j == 2: break

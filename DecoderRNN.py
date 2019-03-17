@@ -21,10 +21,10 @@ class DecoderRNN(nn.Module):
 		self.embedding = nn.Embedding(output_size, hidden_size)
 		# LSTM unit
 		# output of embedding would be = hidden_size
-		self.lstm = nn.LSTM(hidden_size, hidden_size)
+		self.lstm = nn.LSTM(output_size*hidden_size, hidden_size)
 		self.out = nn.Linear(hidden_size, output_size)
 		torch_init.xavier_normal_(self.out.weight)
-		self.softmax = nn.LogSoftmax(dim=1)
+		#self.softmax = nn.LogSoftmax(dim=1)
 
 	def forward(self, input, hidden):
 		output = self.embedding(input).view(1, 1, -1)

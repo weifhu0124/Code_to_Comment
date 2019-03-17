@@ -26,7 +26,7 @@ class AttnDecoderRNN(nn.Module):
 	def forward(self, input, hidden, encoder_outputs):
 		embedded = self.embedding(input).view(1, 1, -1)
 		embedded = self.dropout(embedded)
-		attn_weights = self.attn()
+		attn_weights = self.attn(hidden, encoder_outputs)
 		# batch matrix multiplication
 		attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoder_outputs.unsqueeze(0))
 

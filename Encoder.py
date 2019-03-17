@@ -16,7 +16,7 @@ class Encoder(nn.Module):
     def __init__(self, word_size, emb_dim, hidden_size, device=None):
         super(Encoder, self).__init__()
         self.embedding = nn.Embedding(word_size, emb_dim)
-        self.lstm = nn.LSTM(input_size=word_size * emb_dim, hidden_size=hidden_size)
+        self.lstm = nn.LSTM(input_size=word_size* emb_dim, hidden_size=hidden_size)
         self.hidden = self._init_hidden(hidden_size, device)
 
     # input is an index vector
