@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
-import Attention
+from Attention import Attention
 import torch.nn.init as torch_init
 
 
