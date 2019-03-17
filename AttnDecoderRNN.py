@@ -6,7 +6,7 @@ from Attention import Attention
 import torch.nn.init as torch_init
 
 
-class AttnDecoderRNN:
+class AttnDecoderRNN(nn.Module):
 	def __init__(self, hidden_size, output_size, dropout_p=0.1):
 		super(AttnDecoderRNN, self).__init__()
 		self.hidden_size = hidden_size

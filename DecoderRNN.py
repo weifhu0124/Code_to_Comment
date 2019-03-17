@@ -9,7 +9,7 @@ import torch.nn.init as torch_init
 from torch import optim
 import torch.nn.functional as F
 
-class DecoderRNN:
+class DecoderRNN(nn.Module):
 	def __init__(self, hidden_size, output_size):
 		super(DecoderRNN, self).__init__()
 		# hidden size is the same as encoder
