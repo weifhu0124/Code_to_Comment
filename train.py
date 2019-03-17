@@ -48,7 +48,7 @@ class Evaluation():
         self.history[self.epoch].append((train_loss, val_loss))
 
 
-def preprocessing(file_name):
+def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
     # load data
     with open(file_name, 'rb') as f:
         data = pickle.load(f)
@@ -88,8 +88,8 @@ def preprocessing(file_name):
 
     # max_len_code = max([(code_in_num[i]) for i in range(len(code_in_num))])
     # max_len_comment = max([(comment_in_num[i]) for i in range(len(comment_in_num))])
-    max_len_code = max([max(sublist) for sublist in code_in_num])
-    max_len_comment = max([max(sublist) for sublist in comment_in_num])
+    # max_len_code = max([max(sublist) for sublist in code_in_num])
+    # max_len_comment = max([max(sublist) for sublist in comment_in_num])
     print("Max length of code: " + str(max_len_code))
     print("Max length of comment: " + str(max_len_comment))
 
@@ -150,6 +150,7 @@ def train_model(model, criterion, optimizer, dataloaders,
             loss = criterion(outputs[0], targets.float())
             loss.backward()
             optimizer.step()
+            print(loss)
 
             # evaluation
             evaluate(loss, outputs)
