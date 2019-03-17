@@ -9,7 +9,7 @@ class Attention(nn.Module):
     def __init__(self, hidden_size):
         super(Attention, self).__init__()
         self.hidden_dim = hidden_size
-        self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
+        self.attn = nn.Linear(self.hidden_dim * 2, hidden_size)
         self.v = nn.Parameter(torch.rand(hidden_size))
         self.v.data.normal_(mean=0, std=1. / np.sqrt(self.v.size(0)))
 
