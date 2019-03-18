@@ -82,7 +82,10 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
         split_list = re.split(pattern, comment[i])
         temp_list = []
         for x in split_list:
-            temp_list.append(comment_dict[x])
+            if x in comment_dict:
+                temp_list.append(comment_dict[x])
+            else:
+                temp_list.append(0)
         comment_in_num.append(temp_list)
 
     # len_code = max([len(code_in_num[i]) for i in range(len(code_in_num))])
