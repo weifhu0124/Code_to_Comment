@@ -206,7 +206,7 @@ def validate_model(model, criterion, loader, device=None, verbose=False):
             inputs, targets = inputs.to(device), targets.to(device)
 
             outputs, _ = model(inputs, targets)
-            loss = criterion(outputs, targets.float())
+            loss = criterion(outputs[0], targets.float())
             evaluate(loss, outputs)
 
             if verbose:
