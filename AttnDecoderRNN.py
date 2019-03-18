@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
-from Attention import Attention
+# from Attention import Attention
 import torch.nn.init as torch_init
 
 
@@ -15,7 +15,9 @@ class AttnDecoderRNN(nn.Module):
 		# size of dictionary for embedding = output_size
 		# size of embedding vector = hidden_size
 		self.embedding = nn.Embedding(output_size, hidden_size)
-		self.attn = Attention(hidden_size)
+
+		# initialize attention
+		self.attn = nn.Linear(self.hidden_size * 2, output_size)
 		# combine attention and inputs
 		self.attn_combine = nn.Linear(hidden_size * 2, hidden_size)
 		self.dropout = nn.Dropout(dropout_p)
@@ -26,7 +28,10 @@ class AttnDecoderRNN(nn.Module):
 	def forward(self, input, hidden, encoder_outputs):
 		embedded = self.embedding(input).view(1, 1, -1)
 		embedded = self.dropout(embedded)
-		attn_weights = self.attn(hidden, encoder_outputs)
+
+		attn_weights = F.softmax(self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
+		# attn_weights = self.attn(hidden, encoder_outputs)
+
 		# batch matrix multiplication
 		attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoder_outputs.unsqueeze(0))
 
