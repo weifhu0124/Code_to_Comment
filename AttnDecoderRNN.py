@@ -7,9 +7,11 @@ import torch.nn.init as torch_init
 
 
 class AttnDecoderRNN(nn.Module):
-	def __init__(self, hidden_size, output_size, dropout_p=0.1):
+	def __init__(self, hidden_size, output_size, max_length, dropout_p=0.1):
 		super(AttnDecoderRNN, self).__init__()
+
 		self.hidden_size = hidden_size
+		self.max_length = max_length
 
 		# word embedding
 		# size of dictionary for embedding = output_size
@@ -17,7 +19,7 @@ class AttnDecoderRNN(nn.Module):
 		self.embedding = nn.Embedding(output_size, hidden_size)
 
 		# initialize attention
-		self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
+		self.attn = nn.Linear(self.hidden_size * 2, self.max_length)
 		# combine attention and inputs
 		self.attn_combine = nn.Linear(hidden_size * 2, hidden_size)
 		self.dropout = nn.Dropout(dropout_p)
@@ -39,7 +41,7 @@ class AttnDecoderRNN(nn.Module):
 		output = torch.cat((embedded[0], attn_applied[0]), 1)
 		output = self.attn_combine(output).unsqueeze(0)
 
-		# output = F.relu(output)
+		output = F.relu(output)
 		output, hidden = self.lstm(output, hidden)
 
 		output = F.log_softmax(self.out(output[0]), dim=1)

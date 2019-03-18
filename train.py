@@ -68,7 +68,7 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
     temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
     commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
 
-    comment_dict = dict(zip(commment_wordlist, range(len(commment_wordlist))))
+    comment_dict = dict(zip(commment_wordlist, range(1, 1 + len(commment_wordlist))))
 
     encoder = SBT_encode.Encoder()
 
@@ -82,7 +82,10 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
         split_list = re.split(pattern, comment[i])
         temp_list = []
         for x in split_list:
-            temp_list.append(comment_dict[x])
+            if x in comment_dict:
+                temp_list.append(comment_dict[x])
+            else:
+                temp_list.append(0)
         comment_in_num.append(temp_list)
 
     # len_code = max([len(code_in_num[i]) for i in range(len(code_in_num))])
@@ -104,11 +107,12 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
 
 
 def build_model(word_size_encoder, word_size_decoder, emb_dim=10, hidden_size=100, learning_rate=0.1, device=None):
-    model = seq2seq(word_size_encoder, emb_dim, hidden_size, word_size_decoder, MAX_LEN)
+    criterion = nn.NLLLoss()
+
+    model = seq2seq(word_size_encoder, emb_dim, hidden_size, word_size_decoder, MAX_LEN, criterion)
     # run on the gpu or cpu
     model = model.to(device)
 
-    criterion = nn.L1Loss()
     # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -144,12 +148,11 @@ def train_model(model, criterion, optimizer, dataloaders,
             model.zero_grad()
 
             # regular stuff
-            outputs, _ = model(inputs, targets)
+            loss ,outputs= model(inputs, targets, True)
             # squeeze the unnecessary batchsize dim
-            loss = criterion(outputs[0], targets.float())
-            loss.backward()
+            # loss = criterion(outputs[0], targets.float())
             optimizer.step()
-            print(loss)
+            #print(loss)
 
             # evaluation
             evaluate(loss, outputs)
@@ -204,8 +207,7 @@ def validate_model(model, criterion, loader, device=None, verbose=False):
             targets = torch.LongTensor(targets)
             inputs, targets = inputs.to(device), targets.to(device)
 
-            outputs, _ = model(inputs, targets)
-            loss = criterion(outputs[0], targets.float())
+            loss,outputs = model(inputs, targets)
             evaluate(loss, outputs)
 
             if verbose:
@@ -242,8 +244,8 @@ def check_cuda():
 
 def main(learning_rate=0.01, hidden_size=100, device=None):
     # hyperparameters
-    num_epochs = 50
-    learning_rate = 0.05
+    num_epochs = 10
+    learning_rate = 0.1
     # hidden_size = 100
 
     print('------- Hypers --------\n'
