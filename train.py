@@ -110,7 +110,7 @@ def build_model(word_size_encoder, word_size_decoder, emb_dim=10, hidden_size=10
     # run on the gpu or cpu
     model = model.to(device)
 
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
     # optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
