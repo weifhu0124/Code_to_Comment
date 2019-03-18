@@ -574,8 +574,8 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	#decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	# decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
 	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
