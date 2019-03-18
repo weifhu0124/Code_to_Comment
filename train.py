@@ -68,7 +68,7 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
     temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
     commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
 
-    comment_dict = dict(zip(commment_wordlist, range(len(commment_wordlist))))
+    comment_dict = dict(zip(commment_wordlist, range(1, 1 + len(commment_wordlist))))
 
     encoder = SBT_encode.Encoder()
 
