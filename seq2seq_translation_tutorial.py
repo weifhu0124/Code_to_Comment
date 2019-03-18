@@ -552,8 +552,8 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 			encoder_hidden = encoder.initHidden()
 			# Put the minibatch data in CUDA Tensors and run on the GPU if supported
 			inputs, targets = loader[0][i], loader[1][i]
-			input_tensor = torch.LongTensor(inputs)
-			target_tensor = torch.LongTensor(targets)
+			input_tensor = torch.LongTensor(inputs).to(device)
+			target_tensor = torch.LongTensor(targets).to(device)
 			input_length = input_tensor.size(0)
 			target_length = target_tensor.size(0)
 
@@ -642,7 +642,7 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 		if iter % plot_every == 0:
 			plot_loss_avg = plot_loss_total / plot_every
 			plot_train_losses.append(plot_loss_avg)
-			val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'])
+			val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
 			plot_val_losses.append(val_loss)
 			plot_loss_total = 0
 
