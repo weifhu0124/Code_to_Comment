@@ -544,19 +544,56 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=3000):
 		pickle.dump(comment_in_num, pfile)
 	return code_in_num, comment_in_num, max_len_code, max_len_comment+1
 
+# could also be use to test
+def validate_model(encoder, decoder, criterion, loader, device=None, verbose=False):
+	val_loss = 0
+	with torch.no_grad():
+		for i in range(len(loader[0])):
+			encoder_hidden = encoder.initHidden()
+			# Put the minibatch data in CUDA Tensors and run on the GPU if supported
+			inputs, targets = loader[0][i], loader[1][i]
+			input_tensor = torch.LongTensor(inputs)
+			target_tensor = torch.LongTensor(targets)
+			input_length = input_tensor.size(0)
+			target_length = target_tensor.size(0)
+
+			encoder_outputs = torch.zeros(input_length, encoder.hidden_size, device=device)
+
+			loss = 0
+
+			for ei in range(input_length):
+				encoder_output, encoder_hidden = encoder(
+					input_tensor[ei], encoder_hidden)
+				encoder_outputs[ei] = encoder_output[0, 0]
+
+			decoder_input = torch.tensor([[SOS_token]], device=device)
+
+			decoder_hidden = encoder_hidden
+
+			# Teacher forcing: Feed the target as the next input
+			for di in range(target_length):
+				decoder_output, decoder_hidden, decoder_attention = decoder(
+					decoder_input, decoder_hidden, encoder_outputs)
+				loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
+				decoder_input = target_tensor[di]  # Teacher forcing
+			val_loss += loss.item() / target_length
+		print('Validation Loss: ', val_loss)
+	return val_loss
+
 def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	start = time.time()
-	plot_losses = []
+	plot_train_losses = []
+	plot_val_losses = []
 	print_loss_total = 0  # Reset every print_every
 	plot_loss_total = 0  # Reset every plot_every
 	hidden_size = 256
 
 	criterion = nn.NLLLoss()
-	train_code_in_num, train_comment_in_num, train_word_size_encoder, train_word_size_decoder = preprocessing(
-		'data/train.pkl')
-	val_code_in_num, val_comment_in_num, val_word_size_encoder, val_word_size_decoder = preprocessing('data/valid.pkl')
-	test_code_in_num, test_comment_in_num, test_word_size_encoder, test_word_size_decoder = preprocessing(
-		'data/test.pkl')
+	# train_code_in_num, train_comment_in_num, train_word_size_encoder, train_word_size_decoder = preprocessing(
+	# 	'data/train.pkl')
+	# val_code_in_num, val_comment_in_num, val_word_size_encoder, val_word_size_decoder = preprocessing('data/valid.pkl')
+	# test_code_in_num, test_comment_in_num, test_word_size_encoder, test_word_size_decoder = preprocessing(
+	# 	'data/test.pkl')
 	train_word_size_encoder = 6800
 	train_word_size_decoder = 3001
 	with open('data/train.pkl_code_in_num.pickle', 'rb') as pfile:
@@ -574,8 +611,8 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	# decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	#decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
 	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
@@ -604,10 +641,12 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 
 		if iter % plot_every == 0:
 			plot_loss_avg = plot_loss_total / plot_every
-			plot_losses.append(plot_loss_avg)
+			plot_train_losses.append(plot_loss_avg)
+			val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'])
+			plot_val_losses.append(val_loss)
 			plot_loss_total = 0
 
-	showPlot(range(1, n_iters + 1), plot_losses, plot_losses)
+	showPlot(range(1, n_iters + 1), plot_train_losses, plot_val_losses)
 
 
 ######################################################################
@@ -807,4 +846,3 @@ trainIters(3, print_every=5000)
 #    -  Train as an autoencoder
 #    -  Save only the Encoder network
 #    -  Train a new Decoder for translation from there
-#
