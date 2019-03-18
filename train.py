@@ -280,5 +280,6 @@ def main(learning_rate=0.01, hidden_size=100, device=None):
 
 if __name__ == "__main__":
     model_num = 0
-    main()
+    use_cuda, device, extras = check_cuda()
+    main(device=device)
 
