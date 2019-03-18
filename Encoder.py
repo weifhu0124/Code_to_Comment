@@ -31,6 +31,7 @@ class Encoder(nn.Module):
         return output, self.hidden
 
     def _init_hidden(self, hidden_size, device):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         return [torch.zeros([1, 1, hidden_size]).to(device),
                 torch.zeros([1, 1, hidden_size]).to(device)]
 
