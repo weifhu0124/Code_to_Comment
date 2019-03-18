@@ -270,7 +270,7 @@ def main(learning_rate=0.01, hidden_size=100, device=None):
     #            'init' + str(model_num) + '.pth.tar')
 
     model, criterion, optimizer = build_model(train_word_size_encoder, train_word_size_decoder,
-                                              emb_dim=10, hidden_size=100, learning_rate=0.1, device=None)
+                                              emb_dim=10, hidden_size=100, learning_rate=0.1, device=device)
     evaluate = Evaluation()
 
     train_model(model, criterion, optimizer, dataloaders,
