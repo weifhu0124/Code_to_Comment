@@ -26,7 +26,7 @@ class DecoderRNN(nn.Module):
 		torch_init.xavier_normal_(self.out.weight)
 		#self.softmax = nn.LogSoftmax(dim=1)
 
-	def forward(self, input, hidden):
+	def forward(self, input, hidden, hidden_list):
 		output = self.embedding(input).view(1, 1, -1)
 		output, hidden = self.lstm(output, hidden)
 		output = self.out(output[0])
