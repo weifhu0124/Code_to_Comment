@@ -17,7 +17,7 @@ class AttnDecoderRNN(nn.Module):
 		self.embedding = nn.Embedding(output_size, hidden_size)
 
 		# initialize attention
-		self.attn = nn.Linear(self.hidden_size * 2, output_size)
+		self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
 		# combine attention and inputs
 		self.attn_combine = nn.Linear(hidden_size * 2, hidden_size)
 		self.dropout = nn.Dropout(dropout_p)
