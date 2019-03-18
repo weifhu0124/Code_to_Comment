@@ -152,7 +152,7 @@ def train_model(model, criterion, optimizer, dataloaders,
             loss = criterion(outputs[0], targets.float())
             loss.backward()
             optimizer.step()
-            print(loss)
+            #print(loss)
 
             # evaluation
             evaluate(loss, outputs)
@@ -245,8 +245,8 @@ def check_cuda():
 
 def main(learning_rate=0.01, hidden_size=100, device=None):
     # hyperparameters
-    num_epochs = 50
-    learning_rate = 0.05
+    num_epochs = 10
+    learning_rate = 0.1
     # hidden_size = 100
 
     print('------- Hypers --------\n'
