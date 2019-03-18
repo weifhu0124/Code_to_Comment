@@ -10,7 +10,7 @@ from torch import optim
 import torch.nn.functional as F
 
 class DecoderRNN(nn.Module):
-	def __init__(self, hidden_size, output_size):
+	def __init__(self, hidden_size, vocab_size, output_size):
 		super(DecoderRNN, self).__init__()
 		# hidden size is the same as encoder
 		self.hidden_size = hidden_size
@@ -18,7 +18,7 @@ class DecoderRNN(nn.Module):
 		# word embedding
 		# size of dictionary for embedding = output_size
 		# size of embedding vector = hidden_size
-		self.embedding = nn.Embedding(output_size, hidden_size)
+		self.embedding = nn.Embedding(vocab_size, hidden_size)
 		# LSTM unit
 		# output of embedding would be = hidden_size
 		self.lstm = nn.LSTM(output_size*hidden_size, hidden_size)

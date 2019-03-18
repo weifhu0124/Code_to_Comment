@@ -14,6 +14,7 @@ import pickle
 import SBT_encode
 import re
 
+MAX_LEN = 2200
 
 class Evaluation():
     def __init__(self):
@@ -86,26 +87,26 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=13000):
             temp_list.append(comment_dict[x])
         comment_in_num.append(temp_list)
 
-    # max_len_code = max([(code_in_num[i]) for i in range(len(code_in_num))])
-    # max_len_comment = max([(comment_in_num[i]) for i in range(len(comment_in_num))])
+    # len_code = max([len(code_in_num[i]) for i in range(len(code_in_num))])
+    # len_comment = max([len(comment_in_num[i]) for i in range(len(comment_in_num))])
     # max_len_code = max([max(sublist) for sublist in code_in_num])
     # max_len_comment = max([max(sublist) for sublist in comment_in_num])
     print("Max length of code: " + str(max_len_code))
     print("Max length of comment: " + str(max_len_comment))
 
     for i in range(len(code_in_num)):
-        while len(code_in_num[i]) < max_len_code:
+        while len(code_in_num[i]) < MAX_LEN:
             code_in_num[i].append(0)
 
     for i in range(len(comment_in_num)):
-        while len(comment_in_num[i]) < max_len_comment:
+        while len(comment_in_num[i]) < MAX_LEN:
             comment_in_num[i].append(0)
 
     return code_in_num, comment_in_num, max_len_code, max_len_comment
 
 
 def build_model(word_size_encoder, word_size_decoder, emb_dim=10, hidden_size=100, learning_rate=0.1, device=None):
-    model = seq2seq(word_size_encoder, emb_dim, hidden_size, word_size_decoder)
+    model = seq2seq(word_size_encoder, emb_dim, hidden_size, word_size_decoder, MAX_LEN)
     # run on the gpu or cpu
     model = model.to(device)
 
@@ -244,7 +245,7 @@ def check_cuda():
 def main(learning_rate=0.01, hidden_size=100, device=None):
     # hyperparameters
     num_epochs = 50
-    learning_rate = 0.5
+    learning_rate = 0.05
     # hidden_size = 100
 
     print('------- Hypers --------\n'
