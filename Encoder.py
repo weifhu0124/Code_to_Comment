@@ -41,7 +41,7 @@ class Encoder(nn.Module):
         # self.hidden_list = torch.cat((self.hidden_list,self.hidden[0]),0)
 
         # hidden state will be used to compute attention
-        return output, self.hidden, self.hidden_list
+        return output, self.hidden
 
     def _init_hidden(self, hidden_size, device):
 
