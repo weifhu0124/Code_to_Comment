@@ -577,8 +577,8 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 				loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
 				decoder_input = target_tensor[di]  # Teacher forcing
 			val_loss += loss.item() / target_length
-		print('Validation Loss: ', val_loss)
-	return val_loss
+		print('Validation Loss: ', val_loss / len(loader[0]))
+	return val_loss /len(loader[0])
 
 def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	start = time.time()
