@@ -461,9 +461,9 @@ def trainIters(learning_rate=0.001):
 	showPlot(counts, plot_train_losses, plot_val_losses)
 
 def save_model(encoder, decoder, type='attn'):
-	with open(type+'_encoder.ckpt', 'wb') as pfile:
+	with open(type+'_encoder1.ckpt', 'wb') as pfile:
 		pickle.dump(encoder, pfile)
-	with open(type + '_decoder.ckpt', 'wb') as pfile:
+	with open(type + '_decoder1.ckpt', 'wb') as pfile:
 		pickle.dump(decoder, pfile)
 
 def load_model(type='attn'):
