@@ -7,6 +7,7 @@ import re
 import random
 import SBT_encode
 import pickle
+import numpy
 
 import torch
 import torch.nn as nn
@@ -348,10 +349,13 @@ def preprocessing(file_name, type, comment_dict=None):
 def validate_model(encoder, decoder, criterion, loader, device=None, verbose=False):
 	val_loss = 0
 	with torch.no_grad():
-		for i in range(len(loader[1])):
+		indices = np.arange(len(loader[1]))
+		np.random.shuffle(indices)
+		indices = indices[0:500]
+		for i in range(len(indices)):
 			encoder_hidden = encoder.initHidden()
 			# Put the minibatch data in CUDA Tensors and run on the GPU if supported
-			inputs, targets = loader[0][i], loader[1][i]
+			inputs, targets = loader[0][indices[i]], loader[1][indices[i]]
 			input_tensor = torch.LongTensor(inputs).to(device)
 			target_tensor = torch.LongTensor(targets).to(device)
 			input_length = input_tensor.size(0)
@@ -377,9 +381,8 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 				loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
 				decoder_input = target_tensor[di]  # Teacher forcing
 			val_loss += loss.item() / target_length
-			print(i)
-		print('Validation Loss: ', val_loss / len(loader[0]))
-	return val_loss /len(loader[0])
+		print('Validation Loss: ', val_loss / len(indices))
+	return val_loss /len(indices)
 
 def trainIters(validate_every=5000, learning_rate=0.01):
 	epochs = 50
@@ -438,12 +441,11 @@ def trainIters(validate_every=5000, learning_rate=0.01):
 			loss = train(inputs, targets, encoder,
 							 decoder, encoder_optimizer, decoder_optimizer, criterion)
 			plot_loss_total += loss
-
+			print(iter, plot_loss_avg)
 			if iter % validate_every == 0:
 				counts.append(count)
 				count += 1
 				plot_loss_avg = plot_loss_total / validate_every
-				print(iter, plot_loss_avg)
 				plot_train_losses.append(plot_loss_avg)
 				val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
 				plot_val_losses.append(val_loss)
