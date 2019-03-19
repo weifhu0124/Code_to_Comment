@@ -434,7 +434,8 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	count = 1
 	best_val_loss = 100
 	for eps in range(0, epochs):
-		for iter in range(2336, len(dataloaders['train'][1])):
+		print(len(dataloaders['train'][1]))
+		for iter in range(0, len(dataloaders['train'][1])):
 			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
 			inputs = torch.LongTensor(inputs)
 			targets = torch.LongTensor(targets)
