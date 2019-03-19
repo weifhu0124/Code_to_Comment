@@ -385,7 +385,7 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 		print('Validation Loss: ', val_loss / len(indices))
 	return val_loss /len(indices)
 
-def trainIters(validate_every=5000, learning_rate=0.05):
+def trainIters(validate_every=5000, learning_rate=0.005):
 	epochs = 50
 	plot_train_losses = []
 	plot_val_losses = []
