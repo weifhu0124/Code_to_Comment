@@ -433,7 +433,6 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	counts = []
 	count = 1
 	best_val_loss = 100
-	print(dataloaders['train'][0][2337], dataloaders['train'][1][2337])
 	for eps in range(0, epochs):
 		for iter in range(2336, len(dataloaders['train'][1])):
 			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
