@@ -9,6 +9,9 @@ import SBT_encode
 import pickle
 import numpy
 from collections import Counter
+from torch.utils.data import Dataset, DataLoader
+import torch
+from torchvision import transforms
 
 import torch
 import torch.nn as nn
@@ -16,6 +19,19 @@ from torch import optim
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Check if your system supports CUDA
+use_cuda = torch.cuda.is_available()
+
+# Setup GPU optimization if CUDA is supported
+if use_cuda:
+	computing_device = torch.device("cuda")
+	extras = {"num_workers": 1, "pin_memory": True}
+	print("CUDA is supported")
+else: # Otherwise, train on the CPU
+	computing_device = torch.device("cpu")
+	extras = False
+	print("CUDA NOT supported")
 
 # SOS_token = 0
 # EOS_token = 1
@@ -33,6 +49,44 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #    :alt:
 #
 #
+
+class codeCommentDataset(Dataset):
+	def __init__(self, inputs, target):
+		self.inputs = inputs
+		self.target = target
+
+	def __len__(self):
+		# Return the total number of data samples
+		return len(self.inputs)
+
+	def __getitem__(self, ind):
+		"""Returns one-hot encoded version of the target and labels
+		"""
+		data = self.inputs[ind]
+		label = self.target[ind]
+
+		return torch.LongTensor(data),torch.LongTensor(label)
+
+def createLoaders(train_input, train_target, val_input, val_target, test_input, test_target, batch_size=1, extras={}):
+	# load training, validation and test text
+
+	# Convert into dataloader
+	train_dataset = codeCommentDataset(train_input, train_target)
+	val_dataset = codeCommentDataset(val_input, val_target)
+	test_dataset = codeCommentDataset(test_input, test_target)
+
+
+	num_workers = 0
+	pin_memory = False
+	# If CUDA is available
+	if extras:
+		num_workers = extras["num_workers"]
+		pin_memory = extras["pin_memory"]
+
+	train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory)
+	val_dataloader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory)
+	test_dataloader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory)
+	return train_dataloader, val_dataloader, test_dataloader
 
 class EncoderRNN(nn.Module):
 	def __init__(self, input_size, hidden_size):
@@ -369,15 +423,11 @@ def preprocessing(file_name, type, comment_dict=None):
 def validate_model(encoder, decoder, criterion, loader, SOS_token=None, device=None, verbose=False):
 	val_loss = 0
 	with torch.no_grad():
-		indices = np.arange(len(loader[1]))
-		np.random.shuffle(indices)
-		indices = indices[0:500]
-		for i in range(len(indices)):
+		for i, (inputs, targets) in enumerate(loader, 0):
 			encoder_hidden = encoder.initHidden()
 			# Put the minibatch data in CUDA Tensors and run on the GPU if supported
-			inputs, targets = loader[0][indices[i]], loader[1][indices[i]]
-			input_tensor = torch.LongTensor(inputs).to(device)
-			target_tensor = torch.LongTensor(targets).to(device)
+			input_tensor = torch.LongTensor(inputs[0]).to(device)
+			target_tensor = torch.LongTensor(targets[0]).to(device)
 			input_length = input_tensor.size(0)
 			target_length = target_tensor.size(0)
 
@@ -401,8 +451,8 @@ def validate_model(encoder, decoder, criterion, loader, SOS_token=None, device=N
 				loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
 				decoder_input = target_tensor[di]  # Teacher forcing
 			val_loss += loss.item() / target_length
-		print('Validation Loss: ', val_loss / len(indices))
-	return val_loss /len(indices)
+		print('Validation Loss: ', val_loss / len(loader))
+	return val_loss /len(loader)
 
 def trainIters(learning_rate=0.001):
 	epochs = 15
@@ -418,13 +468,13 @@ def trainIters(learning_rate=0.001):
 		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
-	print('preprocessing..')
-	print('train set..')
-	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
-	print('val set..')
-	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
-	print('test set..')
-	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	# print('preprocessing..')
+	# print('train set..')
+	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	# print('val set..')
+	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	# print('test set..')
+	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
 	print('done..')
 	train_word_size_encoder = 6904
 	train_word_size_decoder = 3003
@@ -453,30 +503,27 @@ def trainIters(learning_rate=0.001):
 	encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
-	dataloaders = {}
-	dataloaders['train'] = (train_code_in_num[:10000], train_comment_in_num[:10000])
-	dataloaders['val'] = (val_code_in_num, val_comment_in_num)
-	dataloaders['test'] = (test_code_in_num, test_comment_in_num)
+	train_loader, val_loader, test_loader = createLoaders(train_code_in_num[:10000], train_comment_in_num[:10000], val_code_in_num[:500],
+														  val_comment_in_num[:500],test_code_in_num, test_comment_in_num,
+														  extras=extras)
 	counts = []
-	count = 1
 	best_val_loss = 100
 	for eps in range(1, epochs + 1):
-		print ('Epoch Number', eps)
-		for iter in range(0, len(dataloaders['train'][1])):
-			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
-			inputs = torch.LongTensor(inputs)
-			targets = torch.LongTensor(targets)
+		print('Epoch Number', eps)
+		for count, (inputs, targets) in enumerate(train_loader, 0):
+			inputs = torch.LongTensor(inputs[0])
+			targets = torch.LongTensor(targets[0])
 			inputs, targets = inputs.to(device), targets.to(device)
 
 			loss = train(inputs, targets, encoder,
 							 decoder, encoder_optimizer, decoder_optimizer, criterion, SOS_token=SOS_token)
 			plot_loss_total += loss
-			print(iter, loss)
+			print(count, loss)
+			val_loss = validate_model(encoder, decoder, criterion, val_loader, SOS_token=SOS_token, device=device)
 		counts.append(eps)
-		count += 1
-		plot_loss_avg = plot_loss_total / len(dataloaders['train'][1])
+		plot_loss_avg = plot_loss_total / len(train_loader)
 		plot_train_losses.append(plot_loss_avg)
-		val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], SOS_token=SOS_token, device=device)
+		val_loss = validate_model(encoder, decoder, criterion, val_loader, SOS_token=SOS_token, device=device)
 		if val_loss < best_val_loss:
 			save_model(encoder, decoder)
 			best_val_loss = val_loss
