@@ -8,6 +8,7 @@ import random
 import SBT_encode
 import pickle
 import numpy
+from collections import Counter
 
 import torch
 import torch.nn as nn
@@ -16,8 +17,8 @@ import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-SOS_token = 0
-EOS_token = 1
+# SOS_token = 0
+# EOS_token = 1
 
 ######################################################################
 # The Encoder
@@ -217,7 +218,7 @@ class AttnDecoderRNN(nn.Module):
 #
 
 
-def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion):
+def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, SOS_token=None):
 	encoder_hidden = encoder.initHidden()
 
 	encoder_optimizer.zero_grad()
@@ -305,21 +306,31 @@ def preprocessing(file_name, type, comment_dict=None):
 	pattern = r',|\.|/|;|\'|`|\[|\]|<|>|\?|:|"|\{|\}|\~|!|@|#|\$|%|\^|&|\(|\)|-|=|\_|\+|，|。|、|；|‘|’|【|】|·|！| |…|（|）'
 	# only when training
 	if comment_dict == None:
-		commment_wordlist = []
+		comment_wordlist = []
 		for i in range(len(comment)):
 			temp_list = re.split(pattern, comment[i])
 			for x in temp_list:
-				commment_wordlist.append(x)
-		temp_dict = {}
-		for word in commment_wordlist:
-			temp_dict[word] = commment_wordlist.count(word)
-		temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
-		commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
+				comment_wordlist.append(x)
+		c = Counter(comment_wordlist)
+		most_common_words, most_common_words_count = zip(*c.most_common(3000))
+		print('5 most common words:', most_common_words[:5])
+		print('5 most common words count', most_common_words_count[:5])
+		comment_dict = dict(zip(most_common_words, range(len(most_common_words))))
+		for token in ['<EOS>', '<SOS>', '<UNK>']:
+			assert(token not in comment_dict)
+			assert(max(comment_dict.values()) < len(comment_dict))
+			comment_dict[token] = len(comment_dict)
 
-		comment_dict = dict(zip(commment_wordlist, range(3, len(commment_wordlist)+3)))
-		comment_dict[SOS_token] = 'SOS'
-		comment_dict[EOS_token] = 'EOS'
-		comment_dict[2] = 'UNK'
+		# temp_dict = {}
+		# for word in commment_wordlist:
+		# 	temp_dict[word] = commment_wordlist.count(word)
+		# temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
+		# commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
+
+		# comment_dict = dict(zip(commment_wordlist, range(3, len(commment_wordlist)+3)))
+		# comment_dict[SOS_token] = 'SOS'
+		# comment_dict[EOS_token] = 'EOS'
+		# comment_dict[2] = 'UNK'
 		# save dictionary
 		with open('data/comment_dict.pkl', 'wb') as pfile:
 			pickle.dump(comment_dict, pfile)
@@ -329,19 +340,24 @@ def preprocessing(file_name, type, comment_dict=None):
 	code_in_num = []
 	comment_in_num = []
 
+	print('code encoding..')
 	for i in range(len(code)):
+		print(i, end='\r')
 		code_in_num.append(encoder.encode(code[i]))
 		# code_in_num[i].append(6903)
                 # already updated in Ecoder - chengyu
+	print('comment encoding..')
 	for i in range(len(comment)):
+		print(i, end='\r')
 		split_list = re.split(pattern, comment[i])
 		temp_list = []
+		temp_list.append(comment_dict['<SOS>'])
 		for x in split_list:
 			if x in comment_dict:
 				temp_list.append(comment_dict[x])
 			else: # unknown
-				temp_list.append(2)
-		temp_list.append(EOS_token)
+				temp_list.append(comment_dict['<UNK>'])
+		temp_list.append(comment_dict['<EOS>'])
 		comment_in_num.append(temp_list)
 	with open('data/' + type + '_code_in_num.pkl', 'wb') as pfile:
 		pickle.dump(code_in_num, pfile)
@@ -350,7 +366,7 @@ def preprocessing(file_name, type, comment_dict=None):
 	return code_in_num, comment_in_num, comment_dict
 
 # could also be use to test
-def validate_model(encoder, decoder, criterion, loader, device=None, verbose=False):
+def validate_model(encoder, decoder, criterion, loader, SOS_token=None, device=None, verbose=False):
 	val_loss = 0
 	with torch.no_grad():
 		indices = np.arange(len(loader[1]))
@@ -402,9 +418,14 @@ def trainIters(learning_rate=0.001):
 		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
-	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
-	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
-	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	print('preprocessing..')
+	print('train set..')
+	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	print('val set..')
+	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	print('test set..')
+	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	print('done..')
 	train_word_size_encoder = 6904
 	train_word_size_decoder = 3003
 	with open('data/train_code_in_num.pkl', 'rb') as pfile:
@@ -420,6 +441,9 @@ def trainIters(learning_rate=0.001):
 	with open('data/test_comment_in_num.pkl', 'rb') as pfile:
 		test_comment_in_num = pickle.load(pfile)
 	print('Data Loaded')
+
+	with open('data/comment_dict.pkl', 'rb') as pfile:
+		SOS_token = pickle.load(pfile)['<SOS>']
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
 	# decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
@@ -445,14 +469,14 @@ def trainIters(learning_rate=0.001):
 			inputs, targets = inputs.to(device), targets.to(device)
 
 			loss = train(inputs, targets, encoder,
-							 decoder, encoder_optimizer, decoder_optimizer, criterion)
+							 decoder, encoder_optimizer, decoder_optimizer, criterion, SOS_token=SOS_token)
 			plot_loss_total += loss
 			print(iter, loss)
 		counts.append(eps)
 		count += 1
 		plot_loss_avg = plot_loss_total / len(dataloaders['train'][1])
 		plot_train_losses.append(plot_loss_avg)
-		val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
+		val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], SOS_token=SOS_token, device=device)
 		if val_loss < best_val_loss:
 			save_model(encoder, decoder)
 			best_val_loss = val_loss
