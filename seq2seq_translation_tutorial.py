@@ -455,7 +455,7 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 		plot_val_losses.append(val_loss)
 		plot_loss_total = 0
 		save_loss(plot_train_losses, plot_val_losses)
-	showPlot(count, plot_train_losses, plot_val_losses)
+	showPlot(counts, plot_train_losses, plot_val_losses)
 
 def save_model(encoder, decoder, type='simple'):
 	with open('encoder.ckpt', 'wb') as pfile:
