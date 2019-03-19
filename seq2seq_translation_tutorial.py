@@ -420,8 +420,8 @@ def trainIters(validate_every=5000, learning_rate=0.05):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	#decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	#decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
 	encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
