@@ -431,6 +431,7 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	dataloaders['test'] = (test_code_in_num, test_comment_in_num)
 	counts = []
 	count = 1
+	best_val_loss = 100
 
 	for eps in range(0, epochs):
 		for iter in range(0, len(dataloaders['train'][1])):
@@ -449,11 +450,24 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 				plot_loss_avg = plot_loss_total / validate_every
 				plot_train_losses.append(plot_loss_avg)
 				val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
+				if val_loss < best_val_loss:
+					save_model(encoder, decoder)
 				plot_val_losses.append(val_loss)
 				plot_loss_total = 0
-
+				save_loss(plot_train_losses, plot_val_losses)
 	showPlot(count, plot_train_losses, plot_val_losses)
 
+def save_model(encoder, decoder):
+	with open('encoder.ckpt', 'wb') as pfile:
+		pickle.dump(encoder, pfile)
+	with open('decoder.ckpt', 'wb') as pfile:
+		pickle.dump(decoder, pfile)
+
+def save_loss(train_loss, val_loss):
+	with open('train_loss.pkl', 'wb') as pfile:
+		pickle.dump(train_loss, pfile)
+	with open('val_loss.pkl', 'wb') as pfile:
+		pickle.dump(val_loss, pfile)
 
 ######################################################################
 # Plotting results
