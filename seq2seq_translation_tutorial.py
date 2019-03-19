@@ -137,7 +137,7 @@ class AttnDecoderRNN(nn.Module):
 		self.hidden_size = hidden_size
 		self.output_size = output_size
 		self.dropout_p = dropout_p
-		self.max_len = 2000
+		self.max_len = 3000
 
 		self.embedding = nn.Embedding(self.output_size, self.hidden_size)
 		self.attn = nn.Linear(self.hidden_size * 2, self.max_len)
@@ -152,7 +152,9 @@ class AttnDecoderRNN(nn.Module):
 
 		attn_weights = F.softmax(
 			self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
-		attn_applied = torch.bmm(attn_weights.unsqueeze(0),
+		enc_out = encoder_outputs.unsqueeze(0)
+		weights = attn_weights.unsqueeze(0)[:,:,0:enc_out.size(1)]
+		attn_applied = torch.bmm(weights,
 								 encoder_outputs.unsqueeze(0))
 
 		output = torch.cat((embedded[0], attn_applied[0]), 1)
@@ -314,9 +316,10 @@ def preprocessing(file_name, type, comment_dict=None):
 		temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
 		commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
 
-		comment_dict = dict(zip(commment_wordlist, range(2, len(commment_wordlist)+2)))
-		comment_dict[0] = 'UNK'
-		comment_dict[1] = 'EOS'
+		comment_dict = dict(zip(commment_wordlist, range(3, len(commment_wordlist)+3)))
+		comment_dict[SOS_token] = 'SOS'
+		comment_dict[EOS_token] = 'EOS'
+		comment_dict[2] = 'UNK'
 		# save dictionary
 		with open('data/comment_dict.pkl', 'wb') as pfile:
 			pickle.dump(comment_dict, pfile)
@@ -328,17 +331,16 @@ def preprocessing(file_name, type, comment_dict=None):
 
 	for i in range(len(code)):
 		code_in_num.append(encoder.encode(code[i]))
-	code_in_num.append(6799)
-
+		code_in_num[i].append(6903)
 	for i in range(len(comment)):
 		split_list = re.split(pattern, comment[i])
 		temp_list = []
 		for x in split_list:
 			if x in comment_dict:
 				temp_list.append(comment_dict[x])
-			else:
-				temp_list.append(0)
-		temp_list.append(1)
+			else: # unknown
+				temp_list.append(2)
+		temp_list.append(EOS_token)
 		comment_in_num.append(temp_list)
 	with open('data/' + type + '_code_in_num.pkl', 'wb') as pfile:
 		pickle.dump(code_in_num, pfile)
@@ -399,9 +401,9 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
-	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
-	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
-	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
 	train_word_size_encoder = 6800
 	train_word_size_decoder = 3002
 	with open('data/train_code_in_num.pkl', 'rb') as pfile:
@@ -419,8 +421,8 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	#decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	# decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
 	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
