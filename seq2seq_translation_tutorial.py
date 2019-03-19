@@ -138,7 +138,7 @@ class AttnDecoderRNN(nn.Module):
 		self.dropout_p = dropout_p
 
 		self.embedding = nn.Embedding(self.output_size, self.hidden_size)
-		self.attn = nn.Linear(self.hidden_size * 2, 6800)
+		self.attn = nn.Linear(self.hidden_size * 2, self.hidden_size)
 		self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
 		self.dropout = nn.Dropout(self.dropout_p)
 		self.gru = nn.GRU(self.hidden_size, self.hidden_size)
@@ -348,7 +348,7 @@ def preprocessing(file_name, type, comment_dict=None):
 def validate_model(encoder, decoder, criterion, loader, device=None, verbose=False):
 	val_loss = 0
 	with torch.no_grad():
-		for i in range(len(loader[0])):
+		for i in range(len(loader[1])):
 			encoder_hidden = encoder.initHidden()
 			# Put the minibatch data in CUDA Tensors and run on the GPU if supported
 			inputs, targets = loader[0][i], loader[1][i]
@@ -377,16 +377,23 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 				loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
 				decoder_input = target_tensor[di]  # Teacher forcing
 			val_loss += loss.item() / target_length
+			print(i)
 		print('Validation Loss: ', val_loss / len(loader[0]))
 	return val_loss /len(loader[0])
 
-def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
-	start = time.time()
+def trainIters(validate_every=5000, learning_rate=0.01):
+	epochs = 50
 	plot_train_losses = []
 	plot_val_losses = []
 	print_loss_total = 0  # Reset every print_every
 	plot_loss_total = 0  # Reset every plot_every
 	hidden_size = 256
+	print('------- Hypers --------\n'
+		  '- epochs: %i\n'
+		  '- learning rate: %g\n'
+		  '- hidden size: %i\n'
+		  '----------------'
+		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
 	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
@@ -409,8 +416,8 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	#decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	#decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
 	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
 	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
@@ -418,33 +425,31 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	dataloaders['train'] = (train_code_in_num, train_comment_in_num)
 	dataloaders['val'] = (val_code_in_num, val_comment_in_num)
 	dataloaders['test'] = (test_code_in_num, test_comment_in_num)
+	counts = []
+	count = 1
 
-	for iter in range(1, n_iters + 1):
-		inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
-		inputs = torch.LongTensor(inputs)
-		targets = torch.LongTensor(targets)
-		inputs, targets = inputs.to(device), targets.to(device)
+	for eps in range(0, epochs):
+		for iter in range(0, len(dataloaders['train'][1])):
+			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
+			inputs = torch.LongTensor(inputs)
+			targets = torch.LongTensor(targets)
+			inputs, targets = inputs.to(device), targets.to(device)
 
-		loss = train(inputs, targets, encoder,
-						 decoder, encoder_optimizer, decoder_optimizer, criterion)
-		print_loss_total += loss
-		plot_loss_total += loss
-		print(iter, loss)
-		
-		# if iter % print_every == 0:
-		# 	print_loss_avg = print_loss_total / print_every
-		# 	print_loss_total = 0
-		# 	print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
-		# 								 iter, iter / n_iters * 100, print_loss_avg))
+			loss = train(inputs, targets, encoder,
+							 decoder, encoder_optimizer, decoder_optimizer, criterion)
+			plot_loss_total += loss
 
-		if iter % plot_every == 0:
-			plot_loss_avg = plot_loss_total / plot_every
-			plot_train_losses.append(plot_loss_avg)
-			val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
-			plot_val_losses.append(val_loss)
-			plot_loss_total = 0
+			if iter % validate_every == 0:
+				counts.append(count)
+				count += 1
+				plot_loss_avg = plot_loss_total / validate_every
+				print(iter, plot_loss_avg)
+				plot_train_losses.append(plot_loss_avg)
+				val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
+				plot_val_losses.append(val_loss)
+				plot_loss_total = 0
 
-	showPlot(range(1, n_iters + 1), plot_train_losses, plot_val_losses)
+	showPlot(count, plot_train_losses, plot_val_losses)
 
 
 ######################################################################
@@ -472,7 +477,7 @@ def showPlot(iter, train_loss, val_loss):
 	plt.savefig('loss.png', fontsize=fontsize)
 
 
-trainIters(3, print_every=5000)
+trainIters()
 
 ######################################################################
 #
