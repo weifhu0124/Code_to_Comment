@@ -468,13 +468,13 @@ def trainIters(learning_rate=0.001):
 		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
-	# print('preprocessing..')
-	# print('train set..')
-	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
-	# print('val set..')
-	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
-	# print('test set..')
-	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	print('preprocessing..')
+	print('train set..')
+	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	print('val set..')
+	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	print('test set..')
+	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
 	print('done..')
 	train_word_size_encoder = 6904
 	train_word_size_decoder = 3003
@@ -518,8 +518,8 @@ def trainIters(learning_rate=0.001):
 			loss = train(inputs, targets, encoder,
 							 decoder, encoder_optimizer, decoder_optimizer, criterion, SOS_token=SOS_token)
 			plot_loss_total += loss
-			print(count, loss)
-			val_loss = validate_model(encoder, decoder, criterion, val_loader, SOS_token=SOS_token, device=device)
+			if count != 0 and count % 1000 == 0:
+				print(count, loss)
 		counts.append(eps)
 		plot_loss_avg = plot_loss_total / len(train_loader)
 		plot_train_losses.append(plot_loss_avg)
