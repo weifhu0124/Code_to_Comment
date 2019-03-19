@@ -144,7 +144,6 @@ class AttnDecoderRNN(nn.Module):
 		self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
 		self.dropout = nn.Dropout(self.dropout_p)
 		self.gru = nn.GRU(self.hidden_size, self.hidden_size)
-		self.softmax = nn.LogSoftmax(dim=1)
 		self.out = nn.Linear(self.hidden_size, self.output_size)
 
 	def forward(self, input, hidden, encoder_outputs):
@@ -164,7 +163,7 @@ class AttnDecoderRNN(nn.Module):
 		output = F.relu(output)
 		output, hidden = self.gru(output, hidden)
 
-		output = self.softmax(self.out(output[0]))
+		output = F.log_softmax(self.out(output[0]), dim=1)
 		return output, hidden, attn_weights
 
 	def initHidden(self):
@@ -402,11 +401,11 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 		  '' % (epochs, learning_rate, hidden_size))
 
 	criterion = nn.NLLLoss()
-	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
-	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
-	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
+	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
 	train_word_size_encoder = 6904
-	train_word_size_decoder = 3002
+	train_word_size_decoder = 3003
 	with open('data/train_code_in_num.pkl', 'rb') as pfile:
 		train_code_in_num = pickle.load(pfile)
 	with open('data/train_comment_in_num.pkl', 'rb') as pfile:
@@ -434,9 +433,9 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	counts = []
 	count = 1
 	best_val_loss = 100
-
+	print(dataloaders['train'][0][2337], dataloaders['train'][1][2337])
 	for eps in range(0, epochs):
-		for iter in range(0, len(dataloaders['train'][1])):
+		for iter in range(2336, len(dataloaders['train'][1])):
 			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
 			inputs = torch.LongTensor(inputs)
 			targets = torch.LongTensor(targets)
