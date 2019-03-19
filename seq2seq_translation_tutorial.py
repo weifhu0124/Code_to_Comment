@@ -144,6 +144,7 @@ class AttnDecoderRNN(nn.Module):
 		self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
 		self.dropout = nn.Dropout(self.dropout_p)
 		self.gru = nn.GRU(self.hidden_size, self.hidden_size)
+		self.softmax = nn.LogSoftmax(dim=1)
 		self.out = nn.Linear(self.hidden_size, self.output_size)
 
 	def forward(self, input, hidden, encoder_outputs):
@@ -163,7 +164,7 @@ class AttnDecoderRNN(nn.Module):
 		output = F.relu(output)
 		output, hidden = self.gru(output, hidden)
 
-		output = F.log_softmax(self.out(output[0]), dim=1)
+		output = self.softmax(self.out(output[0]))
 		return output, hidden, attn_weights
 
 	def initHidden(self):
