@@ -137,9 +137,10 @@ class AttnDecoderRNN(nn.Module):
 		self.hidden_size = hidden_size
 		self.output_size = output_size
 		self.dropout_p = dropout_p
+		self.max_len = 2000
 
 		self.embedding = nn.Embedding(self.output_size, self.hidden_size)
-		self.attn = nn.Linear(self.hidden_size * 2, self.hidden_size)
+		self.attn = nn.Linear(self.hidden_size * 2, self.max_len)
 		self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
 		self.dropout = nn.Dropout(self.dropout_p)
 		self.gru = nn.GRU(self.hidden_size, self.hidden_size)
@@ -384,7 +385,7 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 		print('Validation Loss: ', val_loss / len(indices))
 	return val_loss /len(indices)
 
-def trainIters(validate_every=5000, learning_rate=0.01):
+def trainIters(validate_every=5000, learning_rate=0.05):
 	epochs = 50
 	plot_train_losses = []
 	plot_val_losses = []
@@ -419,10 +420,10 @@ def trainIters(validate_every=5000, learning_rate=0.01):
 	print('Data Loaded')
 
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
-	decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
-	#decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
-	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
-	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
+	#decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
+	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
+	encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
+	decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
 	dataloaders = {}
 	dataloaders['train'] = (train_code_in_num, train_comment_in_num)
