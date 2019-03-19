@@ -404,7 +404,7 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
 	val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
 	test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
-	train_word_size_encoder = 6800
+	train_word_size_encoder = 6904
 	train_word_size_decoder = 3002
 	with open('data/train_code_in_num.pkl', 'rb') as pfile:
 		train_code_in_num = pickle.load(pfile)
