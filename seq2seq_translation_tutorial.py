@@ -387,8 +387,8 @@ def validate_model(encoder, decoder, criterion, loader, device=None, verbose=Fal
 		print('Validation Loss: ', val_loss / len(indices))
 	return val_loss /len(indices)
 
-def trainIters(validate_every=5000, learning_rate=0.005):
-	epochs = 50
+def trainIters(learning_rate=0.001):
+	epochs = 15
 	plot_train_losses = []
 	plot_val_losses = []
 	plot_loss_total = 0  # Reset every plot_every
@@ -423,8 +423,10 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	encoder = EncoderRNN(train_word_size_encoder, hidden_size).to(device)
 	# decoder = DecoderRNN(hidden_size, train_word_size_decoder).to(device)
 	decoder = AttnDecoderRNN(hidden_size, train_word_size_decoder, dropout_p=0.1).to(device)
-	encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
-	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
+	# COMMENT OUT WHEN FIRST TRAINING
+	# encoder, decoder = load_model()
+	encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
+	decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
 
 	dataloaders = {}
 	dataloaders['train'] = (train_code_in_num[:10000], train_comment_in_num[:10000])
@@ -433,7 +435,8 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	counts = []
 	count = 1
 	best_val_loss = 100
-	for eps in range(0, epochs):
+	for eps in range(1, epochs + 1):
+		print ('Epoch Number', eps)
 		for iter in range(0, len(dataloaders['train'][1])):
 			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
 			inputs = torch.LongTensor(inputs)
@@ -457,16 +460,23 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 		save_loss(plot_train_losses, plot_val_losses)
 	showPlot(counts, plot_train_losses, plot_val_losses)
 
-def save_model(encoder, decoder, type='simple'):
-	with open('encoder.ckpt', 'wb') as pfile:
+def save_model(encoder, decoder, type='attn'):
+	with open(type+'_encoder.ckpt', 'wb') as pfile:
 		pickle.dump(encoder, pfile)
 	with open(type + '_decoder.ckpt', 'wb') as pfile:
 		pickle.dump(decoder, pfile)
 
+def load_model(type='attn'):
+	with open(type+'_encoder.ckpt', 'rb') as pfile:
+		encoder = pickle.load(pfile)
+	with open(type + '_decoder.ckpt', 'rb') as pfile:
+		decoder = pickle.load(pfile)
+	return encoder, decoder
+
 def save_loss(train_loss, val_loss):
-	with open('train_loss.pkl', 'wb') as pfile:
+	with open('train_loss1.pkl', 'wb') as pfile:
 		pickle.dump(train_loss, pfile)
-	with open('val_loss.pkl', 'wb') as pfile:
+	with open('val_loss1.pkl', 'wb') as pfile:
 		pickle.dump(val_loss, pfile)
 
 ######################################################################
