@@ -441,7 +441,7 @@ def trainIters(validate_every=5000, learning_rate=0.01):
 			loss = train(inputs, targets, encoder,
 							 decoder, encoder_optimizer, decoder_optimizer, criterion)
 			plot_loss_total += loss
-			print(iter, plot_loss_avg)
+			print(iter, loss)
 			if iter % validate_every == 0:
 				counts.append(count)
 				count += 1
