@@ -1,88 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Translation with a Sequence to Sequence Network and Attention
-*************************************************************
-**Author**: `Sean Robertson <https://github.com/spro/practical-pytorch>`_
-
-In this project we will be teaching a neural network to translate from
-French to English.
-
-::
-
-	[KEY: > input, = target, < output]
-
-	> il est en train de peindre un tableau .
-	= he is painting a picture .
-	< he is painting a picture .
-
-	> pourquoi ne pas essayer ce vin delicieux ?
-	= why not try that delicious wine ?
-	< why not try that delicious wine ?
-
-	> elle n est pas poete mais romanciere .
-	= she is not a poet but a novelist .
-	< she not not a poet but a novelist .
-
-	> vous etes trop maigre .
-	= you re too skinny .
-	< you re all alone .
-
-... to varying degrees of success.
-
-This is made possible by the simple but powerful idea of the `sequence
-to sequence network <https://arxiv.org/abs/1409.3215>`__, in which two
-recurrent neural networks work together to transform one sequence to
-another. An encoder network condenses an input sequence into a vector,
-and a decoder network unfolds that vector into a new sequence.
-
-.. figure:: /_static/img/seq-seq-images/seq2seq.png
-   :alt:
-
-To improve upon this model we'll use an `attention
-mechanism <https://arxiv.org/abs/1409.0473>`__, which lets the decoder
-learn to focus over a specific range of the input sequence.
-
-**Recommended Reading:**
-
-I assume you have at least installed PyTorch, know Python, and
-understand Tensors:
-
--  https://pytorch.org/ For installation instructions
--  :doc:`/beginner/deep_learning_60min_blitz` to get started with PyTorch in general
--  :doc:`/beginner/pytorch_with_examples` for a wide and deep overview
--  :doc:`/beginner/former_torchies_tutorial` if you are former Lua Torch user
-
-
-It would also be useful to know about Sequence to Sequence networks and
-how they work:
-
--  `Learning Phrase Representations using RNN Encoder-Decoder for
-   Statistical Machine Translation <https://arxiv.org/abs/1406.1078>`__
--  `Sequence to Sequence Learning with Neural
-   Networks <https://arxiv.org/abs/1409.3215>`__
--  `Neural Machine Translation by Jointly Learning to Align and
-   Translate <https://arxiv.org/abs/1409.0473>`__
--  `A Neural Conversational Model <https://arxiv.org/abs/1506.05869>`__
-
-You will also find the previous tutorials on
-:doc:`/intermediate/char_rnn_classification_tutorial`
-and :doc:`/intermediate/char_rnn_generation_tutorial`
-helpful as those concepts are very similar to the Encoder and Decoder
-models, respectively.
-
-And for more, read the papers that introduced these topics:
-
--  `Learning Phrase Representations using RNN Encoder-Decoder for
-   Statistical Machine Translation <https://arxiv.org/abs/1406.1078>`__
--  `Sequence to Sequence Learning with Neural
-   Networks <https://arxiv.org/abs/1409.3215>`__
--  `Neural Machine Translation by Jointly Learning to Align and
-   Translate <https://arxiv.org/abs/1409.0473>`__
--  `A Neural Conversational Model <https://arxiv.org/abs/1506.05869>`__
-
-
-**Requirements**
-"""
 from __future__ import unicode_literals, print_function, division
 from io import open
 import unicodedata
@@ -99,110 +15,8 @@ import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-######################################################################
-# Loading data files
-# ==================
-#
-# The data for this project is a set of many thousands of English to
-# French translation pairs.
-#
-# `This question on Open Data Stack
-# Exchange <https://opendata.stackexchange.com/questions/3888/dataset-of-sentences-translated-into-many-languages>`__
-# pointed me to the open translation site https://tatoeba.org/ which has
-# downloads available at https://tatoeba.org/eng/downloads - and better
-# yet, someone did the extra work of splitting language pairs into
-# individual text files here: https://www.manythings.org/anki/
-#
-# The English to French pairs are too big to include in the repo, so
-# download to ``data/eng-fra.txt`` before continuing. The file is a tab
-# separated list of translation pairs:
-#
-# ::
-#
-#     I am cold.    J'ai froid.
-#
-# .. Note::
-#    Download the data from
-#    `here <https://download.pytorch.org/tutorial/data.zip>`_
-#    and extract it to the current directory.
-
-######################################################################
-# Similar to the character encoding used in the character-level RNN
-# tutorials, we will be representing each word in a language as a one-hot
-# vector, or giant vector of zeros except for a single one (at the index
-# of the word). Compared to the dozens of characters that might exist in a
-# language, there are many many more words, so the encoding vector is much
-# larger. We will however cheat a bit and trim the data to only use a few
-# thousand words per language.
-#
-# .. figure:: /_static/img/seq-seq-images/word-encoding.png
-#    :alt:
-#
-#
-
-
-######################################################################
-# We'll need a unique index per word to use as the inputs and targets of
-# the networks later. To keep track of all this we will use a helper class
-# called ``Lang`` which has word → index (``word2index``) and index → word
-# (``index2word``) dictionaries, as well as a count of each word
-# ``word2count`` to use to later replace rare words.
-#
-
 SOS_token = 0
 EOS_token = 1
-
-######################################################################
-# Since there are a *lot* of example sentences and we want to train
-# something quickly, we'll trim the data set to only relatively short and
-# simple sentences. Here the maximum length is 10 words (that includes
-# ending punctuation) and we're filtering to sentences that translate to
-# the form "I am" or "He is" etc. (accounting for apostrophes replaced
-# earlier).
-#
-
-MAX_LEN = 2200
-
-
-
-
-
-
-######################################################################
-# The Seq2Seq Model
-# =================
-#
-# A Recurrent Neural Network, or RNN, is a network that operates on a
-# sequence and uses its own output as input for subsequent steps.
-#
-# A `Sequence to Sequence network <https://arxiv.org/abs/1409.3215>`__, or
-# seq2seq network, or `Encoder Decoder
-# network <https://arxiv.org/pdf/1406.1078v3.pdf>`__, is a model
-# consisting of two RNNs called the encoder and decoder. The encoder reads
-# an input sequence and outputs a single vector, and the decoder reads
-# that vector to produce an output sequence.
-#
-# .. figure:: /_static/img/seq-seq-images/seq2seq.png
-#    :alt:
-#
-# Unlike sequence prediction with a single RNN, where every input
-# corresponds to an output, the seq2seq model frees us from sequence
-# length and order, which makes it ideal for translation between two
-# languages.
-#
-# Consider the sentence "Je ne suis pas le chat noir" → "I am not the
-# black cat". Most of the words in the input sentence have a direct
-# translation in the output sentence, but are in slightly different
-# orders, e.g. "chat noir" and "black cat". Because of the "ne/pas"
-# construction there is also one more word in the input sentence. It would
-# be difficult to produce a correct translation directly from the sequence
-# of input words.
-#
-# With a seq2seq model the encoder creates a single vector which, in the
-# ideal case, encodes the "meaning" of the input sequence into a single
-# vector — a single point in some N dimensional space of sentences.
-#
-
 
 ######################################################################
 # The Encoder
@@ -283,11 +97,6 @@ class DecoderRNN(nn.Module):
 	def initHidden(self):
 		return torch.zeros(1, 1, self.hidden_size, device=device)
 
-######################################################################
-# I encourage you to train and observe the results of this model, but to
-# save space we'll be going straight for the gold and introducing the
-# Attention Mechanism.
-#
 
 
 ######################################################################
@@ -322,12 +131,11 @@ class DecoderRNN(nn.Module):
 #
 
 class AttnDecoderRNN(nn.Module):
-	def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LEN):
+	def __init__(self, hidden_size, output_size, dropout_p=0.1):
 		super(AttnDecoderRNN, self).__init__()
 		self.hidden_size = hidden_size
 		self.output_size = output_size
 		self.dropout_p = dropout_p
-		self.max_length = max_length
 
 		self.embedding = nn.Embedding(self.output_size, self.hidden_size)
 		self.attn = nn.Linear(self.hidden_size * 2, 6800)
@@ -405,7 +213,7 @@ class AttnDecoderRNN(nn.Module):
 #
 
 
-def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LEN):
+def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion):
 	encoder_hidden = encoder.initHidden()
 
 	encoder_optimizer.zero_grad()
@@ -478,7 +286,7 @@ def timeSince(since, percent):
 # of examples, time so far, estimated time) and average loss.
 #
 
-def preprocessing(file_name, max_len_code=6800, max_len_comment=3000):
+def preprocessing(file_name, type, comment_dict=None):
 	# load data
 	with open(file_name, 'rb') as f:
 		data = pickle.load(f)
@@ -490,21 +298,26 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=3000):
 		comment.append(temp_comment)
 		code.append(temp_code)
 
-	commment_wordlist = []
 	pattern = r',|\.|/|;|\'|`|\[|\]|<|>|\?|:|"|\{|\}|\~|!|@|#|\$|%|\^|&|\(|\)|-|=|\_|\+|，|。|、|；|‘|’|【|】|·|！| |…|（|）'
-	for i in range(len(comment)):
-		temp_list = re.split(pattern, comment[i])
-		for x in temp_list:
-			commment_wordlist.append(x)
-	temp_dict = {}
-	for word in commment_wordlist:
-		temp_dict[word] = commment_wordlist.count(word)
-	temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
-	commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
+	# only when training
+	if comment_dict == None:
+		commment_wordlist = []
+		for i in range(len(comment)):
+			temp_list = re.split(pattern, comment[i])
+			for x in temp_list:
+				commment_wordlist.append(x)
+		temp_dict = {}
+		for word in commment_wordlist:
+			temp_dict[word] = commment_wordlist.count(word)
+		temp_wordlist = sorted(temp_dict.items(), key=lambda kv: (-kv[1], kv[0]))[:3000]
+		commment_wordlist = [temp_wordlist[i][0] for i in range(len(temp_wordlist))]
 
-	comment_dict = dict(zip(commment_wordlist, range(1, len(commment_wordlist)+1)))
-	comment_dict[0] = 'UNK'
-	# print(comment_dict)
+		comment_dict = dict(zip(commment_wordlist, range(2, len(commment_wordlist)+2)))
+		comment_dict[0] = 'UNK'
+		comment_dict[1] = 'EOS'
+		# save dictionary
+		with open('data/comment_dict.pkl', 'wb') as pfile:
+			pickle.dump(comment_dict, pfile)
 
 	encoder = SBT_encode.Encoder()
 
@@ -513,6 +326,7 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=3000):
 
 	for i in range(len(code)):
 		code_in_num.append(encoder.encode(code[i]))
+	code_in_num.append(6799)
 
 	for i in range(len(comment)):
 		split_list = re.split(pattern, comment[i])
@@ -522,27 +336,13 @@ def preprocessing(file_name, max_len_code=6800, max_len_comment=3000):
 				temp_list.append(comment_dict[x])
 			else:
 				temp_list.append(0)
+		temp_list.append(1)
 		comment_in_num.append(temp_list)
-
-	# len_code = max([len(code_in_num[i]) for i in range(len(code_in_num))])
-	# len_comment = max([len(comment_in_num[i]) for i in range(len(comment_in_num))])
-	# max_len_code = max([max(sublist) for sublist in code_in_num])
-	# max_len_comment = max([max(sublist) for sublist in comment_in_num])
-	print("Max length of code: " + str(max_len_code))
-	print("Max length of comment: " + str(max_len_comment))
-
-	for i in range(len(code_in_num)):
-		while len(code_in_num[i]) < max_len_code:
-			code_in_num[i].append(0)
-
-	for i in range(len(comment_in_num)):
-		while len(comment_in_num[i]) < max_len_comment + 1:
-			comment_in_num[i].append(0)
-	with open(file_name + '_code_in_num.pickle', 'wb') as pfile:
+	with open('data/' + type + '_code_in_num.pkl', 'wb') as pfile:
 		pickle.dump(code_in_num, pfile)
-	with open(file_name + '_comment_in_num.pickle', 'wb') as pfile:
+	with open('data/' + type + '_comment_in_num.pkl', 'wb') as pfile:
 		pickle.dump(comment_in_num, pfile)
-	return code_in_num, comment_in_num, max_len_code, max_len_comment+1
+	return code_in_num, comment_in_num, comment_dict
 
 # could also be use to test
 def validate_model(encoder, decoder, criterion, loader, device=None, verbose=False):
@@ -589,24 +389,22 @@ def trainIters(n_iters, print_every=1000, plot_every=1, learning_rate=0.01):
 	hidden_size = 256
 
 	criterion = nn.NLLLoss()
-	# train_code_in_num, train_comment_in_num, train_word_size_encoder, train_word_size_decoder = preprocessing(
-	# 	'data/train.pkl')
-	# val_code_in_num, val_comment_in_num, val_word_size_encoder, val_word_size_decoder = preprocessing('data/valid.pkl')
-	# test_code_in_num, test_comment_in_num, test_word_size_encoder, test_word_size_decoder = preprocessing(
-	# 	'data/test.pkl')
+	# train_code_in_num, train_comment_in_num, train_comment_dict = preprocessing('data/train.pkl', 'train')
+	# val_code_in_num, val_comment_in_num, train_comment_dict = preprocessing('data/valid.pkl', 'val', train_comment_dict)
+	# test_code_in_num, test_comment_in_num, train_comment_dict = preprocessing('data/test.pkl', 'test', train_comment_dict)
 	train_word_size_encoder = 6800
-	train_word_size_decoder = 3001
-	with open('data/train.pkl_code_in_num.pickle', 'rb') as pfile:
+	train_word_size_decoder = 3002
+	with open('data/train_code_in_num.pkl', 'rb') as pfile:
 		train_code_in_num = pickle.load(pfile)
-	with open('data/train.pkl_comment_in_num.pickle', 'rb') as pfile:
+	with open('data/train_comment_in_num.pkl', 'rb') as pfile:
 		train_comment_in_num = pickle.load(pfile)
-	with open('data/valid.pkl_code_in_num.pickle', 'rb') as pfile:
+	with open('data/val_code_in_num.pkl', 'rb') as pfile:
 		val_code_in_num = pickle.load(pfile)
-	with open('data/valid.pkl_comment_in_num.pickle', 'rb') as pfile:
+	with open('data/val_comment_in_num.pkl', 'rb') as pfile:
 		val_comment_in_num = pickle.load(pfile)
-	with open('data/test.pkl_code_in_num.pickle', 'rb') as pfile:
+	with open('data/test_code_in_num.pkl', 'rb') as pfile:
 		test_code_in_num = pickle.load(pfile)
-	with open('data/test.pkl_comment_in_num.pickle', 'rb') as pfile:
+	with open('data/test_comment_in_num.pkl', 'rb') as pfile:
 		test_comment_in_num = pickle.load(pfile)
 	print('Data Loaded')
 
@@ -674,88 +472,6 @@ def showPlot(iter, train_loss, val_loss):
 	plt.savefig('loss.png', fontsize=fontsize)
 
 
-######################################################################
-# Evaluation
-# ==========
-#
-# Evaluation is mostly the same as training, but there are no targets so
-# we simply feed the decoder's predictions back to itself for each step.
-# Every time it predicts a word we add it to the output string, and if it
-# predicts the EOS token we stop there. We also store the decoder's
-# attention outputs for display later.
-#
-#
-# def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
-# 	with torch.no_grad():
-# 		input_tensor = tensorFromSentence(input_lang, sentence)
-# 		input_length = input_tensor.size()[0]
-# 		encoder_hidden = encoder.initHidden()
-#
-# 		encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
-#
-# 		for ei in range(input_length):
-# 			encoder_output, encoder_hidden = encoder(input_tensor[ei],
-# 													 encoder_hidden)
-# 			encoder_outputs[ei] += encoder_output[0, 0]
-#
-# 		decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
-#
-# 		decoder_hidden = encoder_hidden
-#
-# 		decoded_words = []
-# 		decoder_attentions = torch.zeros(max_length, max_length)
-#
-# 		for di in range(max_length):
-# 			decoder_output, decoder_hidden, decoder_attention = decoder(
-# 				decoder_input, decoder_hidden, encoder_outputs)
-# 			decoder_attentions[di] = decoder_attention.data
-# 			topv, topi = decoder_output.data.topk(1)
-# 			if topi.item() == EOS_token:
-# 				decoded_words.append('<EOS>')
-# 				break
-# 			else:
-# 				decoded_words.append(output_lang.index2word[topi.item()])
-#
-# 			decoder_input = topi.squeeze().detach()
-#
-# 		return decoded_words, decoder_attentions[:di + 1]
-#
-#
-# ######################################################################
-# # We can evaluate random sentences from the training set and print out the
-# # input, target, and output to make some subjective quality judgements:
-# #
-#
-# def evaluateRandomly(encoder, decoder, n=10):
-# 	for i in range(n):
-# 		pair = random.choice(pairs)
-# 		print('>', pair[0])
-# 		print('=', pair[1])
-# 		output_words, attentions = evaluate(encoder, decoder, pair[0])
-# 		output_sentence = ' '.join(output_words)
-# 		print('<', output_sentence)
-# 		print('')
-
-
-######################################################################
-# Training and Evaluating
-# =======================
-#
-# With all these helper functions in place (it looks like extra work, but
-# it makes it easier to run multiple experiments) we can actually
-# initialize a network and start training.
-#
-# Remember that the input sentences were heavily filtered. For this small
-# dataset we can use relatively small networks of 256 hidden nodes and a
-# single GRU layer. After about 40 minutes on a MacBook CPU we'll get some
-# reasonable results.
-#
-# .. Note::
-#    If you run this notebook you can train, interrupt the kernel,
-#    evaluate, and continue training later. Comment out the lines where the
-#    encoder and decoder are initialized and run ``trainIters`` again.
-#
-
 trainIters(3, print_every=5000)
 
 ######################################################################
@@ -813,36 +529,3 @@ trainIters(3, print_every=5000)
 #     print('input =', input_sentence)
 #     print('output =', ' '.join(output_words))
 #     showAttention(input_sentence, output_words, attentions)
-#
-#
-# evaluateAndShowAttention("elle a cinq ans de moins que moi .")
-#
-# evaluateAndShowAttention("elle est trop petit .")
-#
-# evaluateAndShowAttention("je ne crains pas de mourir .")
-#
-# evaluateAndShowAttention("c est un jeune directeur plein de talent .")
-
-
-######################################################################
-# Exercises
-# =========
-#
-# -  Try with a different dataset
-#
-#    -  Another language pair
-#    -  Human → Machine (e.g. IOT commands)
-#    -  Chat → Response
-#    -  Question → Answer
-#
-# -  Replace the embeddings with pre-trained word embeddings such as word2vec or
-#    GloVe
-# -  Try with more layers, more hidden units, and more sentences. Compare
-#    the training time and results.
-# -  If you use a translation file where pairs have two of the same phrase
-#    (``I am test \t I am test``), you can use this as an autoencoder. Try
-#    this:
-#
-#    -  Train as an autoencoder
-#    -  Save only the Encoder network
-#    -  Train a new Decoder for translation from there
