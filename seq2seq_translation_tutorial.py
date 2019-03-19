@@ -331,7 +331,8 @@ def preprocessing(file_name, type, comment_dict=None):
 
 	for i in range(len(code)):
 		code_in_num.append(encoder.encode(code[i]))
-		code_in_num[i].append(6903)
+		# code_in_num[i].append(6903)
+                # already updated in Ecoder - chengyu
 	for i in range(len(comment)):
 		split_list = re.split(pattern, comment[i])
 		temp_list = []

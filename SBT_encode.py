@@ -186,6 +186,10 @@ class Encoder():
             self.vocab_dict = pickle.load(f)
         with open('frequently_used_name.pkl', 'rb') as f:
             self.name_vocab = pickle.load(f)
+        # append <EOS> to the dictionary
+        assert('<EOS>' not in self.vocab_dict)
+        assert(max(self.vocab_dict.values()) < len(self.vocab_dict))
+        self.vocab_dict['<EOS>'] = len(self.vocab_dict)
         self.invert_dict = self.__invert(self.vocab_dict)
 
     def __invert(self, d):
@@ -206,6 +210,7 @@ class Encoder():
                 else:
                     raise KeyError('Some structural base not included! Critical!')
             seq.append(self.vocab_dict[token])
+        seq.append(self.vocab_dict['<EOS>'])
         return seq
 
     def decode(self, seq):
@@ -252,3 +257,9 @@ if __name__ == '__main__':
 
     print('-------- encoded code --------')
     print(encoder.encode(code))
+
+
+
+
+
+
