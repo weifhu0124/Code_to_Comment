@@ -427,14 +427,13 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
 	dataloaders = {}
-	dataloaders['train'] = (train_code_in_num, train_comment_in_num)
+	dataloaders['train'] = (train_code_in_num[:10000], train_comment_in_num[:10000])
 	dataloaders['val'] = (val_code_in_num, val_comment_in_num)
 	dataloaders['test'] = (test_code_in_num, test_comment_in_num)
 	counts = []
 	count = 1
 	best_val_loss = 100
 	for eps in range(0, epochs):
-		print(len(dataloaders['train'][1]))
 		for iter in range(0, len(dataloaders['train'][1])):
 			inputs, targets = dataloaders['train'][0][iter], dataloaders['train'][1][iter]
 			inputs = torch.LongTensor(inputs)
