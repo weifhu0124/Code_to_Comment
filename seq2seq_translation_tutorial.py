@@ -389,7 +389,6 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 	epochs = 50
 	plot_train_losses = []
 	plot_val_losses = []
-	print_loss_total = 0  # Reset every print_every
 	plot_loss_total = 0  # Reset every plot_every
 	hidden_size = 256
 	print('------- Hypers --------\n'
@@ -444,23 +443,22 @@ def trainIters(validate_every=5000, learning_rate=0.005):
 							 decoder, encoder_optimizer, decoder_optimizer, criterion)
 			plot_loss_total += loss
 			print(iter, loss)
-			if iter % validate_every == 0:
-				counts.append(count)
-				count += 1
-				plot_loss_avg = plot_loss_total / validate_every
-				plot_train_losses.append(plot_loss_avg)
-				val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
-				if val_loss < best_val_loss:
-					save_model(encoder, decoder)
-				plot_val_losses.append(val_loss)
-				plot_loss_total = 0
-				save_loss(plot_train_losses, plot_val_losses)
+		counts.append(eps)
+		count += 1
+		plot_loss_avg = plot_loss_total / len(dataloaders['train'][1])
+		plot_train_losses.append(plot_loss_avg)
+		val_loss = validate_model(encoder, decoder, criterion, dataloaders['val'], device=device)
+		if val_loss < best_val_loss:
+			save_model(encoder, decoder)
+		plot_val_losses.append(val_loss)
+		plot_loss_total = 0
+		save_loss(plot_train_losses, plot_val_losses)
 	showPlot(count, plot_train_losses, plot_val_losses)
 
-def save_model(encoder, decoder):
+def save_model(encoder, decoder, type='simple'):
 	with open('encoder.ckpt', 'wb') as pfile:
 		pickle.dump(encoder, pfile)
-	with open('decoder.ckpt', 'wb') as pfile:
+	with open(type + '_decoder.ckpt', 'wb') as pfile:
 		pickle.dump(decoder, pfile)
 
 def save_loss(train_loss, val_loss):
