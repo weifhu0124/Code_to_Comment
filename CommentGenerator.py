@@ -102,6 +102,8 @@ def main():
         test_code_in_num = pickle.load(pfile)
     with open('data/test_comment_in_num.pkl', 'rb') as pfile:
         test_comment_in_num = pickle.load(pfile)
+    with open('data/test.pkl', 'rb') as pfile:
+        test_code_comment = pickle.load(pfile)
     # load model
     encoder, decoder = load_model()
 
@@ -109,12 +111,13 @@ def main():
     generator = Generator(encoder, decoder, comment_dict, SOS_token, EOS_token, device)
     
     idx = 500
+    _, _code = test_code_comment[idx]
     _input = test_code_in_num[idx]
     _target = test_comment_in_num[idx]
     _output = generator(_input,_target)
     print(generator.generate(_target))
     print(_output)
-    showAttention(_input, _output, decoder.attn.weight)
+    showAttention(_code, _output, decoder.attn.weight)
 
 
 if __name__ == '__main__':
