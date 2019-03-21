@@ -73,7 +73,7 @@ def showAttention(input_sentence, output_words, attentions):
     # Set up figure with colorbar
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    cax = ax.matshow(attentions.numpy(), cmap='bone')
+    cax = ax.matshow(attentions.detach().numpy(), cmap='bone')
     fig.colorbar(cax)
 
     # Set up axes
@@ -114,7 +114,7 @@ def main():
     _output = generator(_input,_target)
     print(generator.generate(_target))
     print(_output)
-    showAttention(_input, _output, decoder.attn.weight)
+    showAttention(_input, _output, decoder.attn)
 
 
 if __name__ == '__main__':
