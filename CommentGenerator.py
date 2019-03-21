@@ -81,9 +81,9 @@ def showAttention(input_sentence, output_words, attentions):
                        ['<EOS>'], rotation=90)
     ax.set_yticklabels([''] + output_words)
 
-    # Show label at every tick
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    # # Show label at every tick
+    # ax.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    # ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
 
     plt.savefig('attention_map.png')
 
