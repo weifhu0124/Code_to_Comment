@@ -575,8 +575,8 @@ def showPlot(iter, train_loss, val_loss):
 	plt.ylabel('loss', fontsize=fontsize)
 	plt.savefig('loss.png', fontsize=fontsize)
 
-
-trainIters()
+if __name__ == '__main__':
+	trainIters()
 
 ######################################################################
 #
