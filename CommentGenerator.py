@@ -114,7 +114,7 @@ def main():
     _output = generator(_input,_target)
     print(generator.generate(_target))
     print(_output)
-    showAttention(_input, _output, decoder.attn)
+    showAttention(_input, _output, decoder.attn.weight)
 
 
 if __name__ == '__main__':
